@@ -8,8 +8,9 @@ import VistaProfesor from './components/VistaProfesor';
 
 type Vista = 'estudiante' | 'profesor';
 
-const SEATS = generateSeats();
 const STORAGE_KEY = 'aula-distribucion-v1';
+const MIN_FILAS = 1;
+const MAX_FILAS = 12;
 
 function loadFromStorage() {
   try {
@@ -20,6 +21,7 @@ function loadFromStorage() {
       listaEspera: string[];
       alias: Nicknames;
       iconos: Avatares;
+      filas?: number;
     };
   } catch {
     return null;
@@ -30,10 +32,13 @@ export default function App() {
   const saved = loadFromStorage();
 
   const [vista, setVista] = useState<Vista>('estudiante');
+  const [filas, setFilas] = useState<number>(saved?.filas ?? 5);
   const [asignaciones, setAsignaciones] = useState<Asignaciones>(saved?.asignaciones ?? {});
   const [listaEspera, setListaEspera] = useState<string[]>(saved?.listaEspera ?? ESTUDIANTES);
   const [nicknames, setNicknames] = useState<Nicknames>(saved?.alias ?? {});
   const [avatares, setAvatares] = useState<Avatares>(saved?.iconos ?? {});
+
+  const seats = generateSeats(filas);
   const [preguntados, setPreguntados] = useState<string[]>([]);
   const [estudianteDestacado, setEstudianteDestacado] = useState<string | null>(null);
   const [jsonAbierto, setJsonAbierto] = useState(false);
@@ -42,8 +47,9 @@ export default function App() {
 
   // Persist to localStorage on every relevant state change
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, jsonSnapshot);
-  }, [jsonSnapshot]);
+    const data = JSON.stringify({ ...JSON.parse(jsonSnapshot), filas });
+    localStorage.setItem(STORAGE_KEY, data);
+  }, [jsonSnapshot, filas]);
 
   function handleRuletaResult(student: string): void {
     setPreguntados((prev) => prev.includes(student) ? prev : [...prev, student]);
@@ -88,6 +94,29 @@ export default function App() {
     });
   }
 
+  function handleFilasChange(nuevasFilas: number): void {
+    const clamped = Math.min(MAX_FILAS, Math.max(MIN_FILAS, nuevasFilas));
+    const validSeats = generateSeats(clamped);
+    const validSeatIds = new Set(validSeats.map((s) => s.id));
+    const nuevoAsig: Asignaciones = {};
+    const desplazados: string[] = [];
+    for (const [student, seatId] of Object.entries(asignaciones)) {
+      if (validSeatIds.has(seatId)) {
+        nuevoAsig[student] = seatId;
+      } else {
+        desplazados.push(student);
+      }
+    }
+    setFilas(clamped);
+    setAsignaciones(nuevoAsig);
+    if (desplazados.length > 0) {
+      setListaEspera((prev) => {
+        const existing = new Set(prev);
+        return [...prev, ...desplazados.filter((s) => !existing.has(s))];
+      });
+    }
+  }
+
   function handleReset(): void {
     if (!confirm('¿Reiniciar toda la distribución? Se perderán todos los asientos, alias e íconos.')) return;
     setAsignaciones({});
@@ -116,6 +145,17 @@ export default function App() {
           >
             👨‍🏫 Vista Profesor
           </button>
+          <label className="tab filas-control">
+            Filas:
+            <input
+              type="number"
+              min={MIN_FILAS}
+              max={MAX_FILAS}
+              value={filas}
+              onChange={(e) => handleFilasChange(Number(e.target.value))}
+              className="filas-input"
+            />
+          </label>
           <button className="tab tab-reset" onClick={handleReset}>
             🗑 Reiniciar
           </button>
@@ -125,7 +165,7 @@ export default function App() {
       <main className="app-main">
         {vista === 'estudiante' ? (
           <VistaEstudiante
-            seats={SEATS}
+            seats={seats}
             asignaciones={asignaciones}
             listaEspera={listaEspera}
             nicknames={nicknames}
@@ -136,7 +176,7 @@ export default function App() {
           />
         ) : (
           <VistaProfesor
-            seats={SEATS}
+            seats={seats}
             asignaciones={asignaciones}
             listaEspera={listaEspera}
             nicknames={nicknames}

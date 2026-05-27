@@ -36,6 +36,18 @@ body {
 .tab-reset { border-color: #f87171; color: #f87171; }
 .tab-reset:hover { background: #f87171; color: #fff; }
 
+.filas-control { display: flex; align-items: center; gap: 0.4rem; font-size: 0.9rem; color: #ccc; }
+.filas-input {
+  width: 3.2rem;
+  padding: 0.15rem 0.3rem;
+  border-radius: 5px;
+  border: 1px solid #555;
+  background: #1a1a2e;
+  color: #fff;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 .app-main { flex: 1; padding: 2rem; }
 
 /* ── Shared vista ──────────────────────────────── */

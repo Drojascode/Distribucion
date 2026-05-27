@@ -28,8 +28,9 @@ export default function VistaProfesor({
   const seatedStudents = Object.keys(asignaciones);
   const candidatos = seatedStudents.filter((s) => !preguntados.includes(s));
 
-  // Teacher sees from the front: row 5 at top (back of class), row 1 at bottom (front)
-  const rows = [5, 4, 3, 2, 1];
+  // Teacher sees from the front: last row at top (back of class), row 1 at bottom (front)
+  const maxRow = seats.length > 0 ? Math.max(...seats.map((s) => s.row)) : 0;
+  const rows = Array.from({ length: maxRow }, (_, i) => maxRow - i);
 
   function getSeatsByRow(row: number, side: 'L' | 'R'): Seat[] {
     return seats.filter((s) => s.row === row && s.side === side);

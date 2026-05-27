@@ -27,7 +27,8 @@ export default function VistaEstudiante({
     seatOccupant[seatId] = student;
   }
 
-  const rows = Array.from({ length: 5 }, (_, i) => i + 1);
+  const maxRow = seats.length > 0 ? Math.max(...seats.map((s) => s.row)) : 0;
+  const rows = Array.from({ length: maxRow }, (_, i) => i + 1);
 
   function getSeatsByRow(row: number, side: 'L' | 'R'): Seat[] {
     return seats.filter((s) => s.row === row && s.side === side);
