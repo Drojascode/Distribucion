@@ -9,7 +9,7 @@ on:
 env:
   AZURE_WEBAPP_NAME: Distribucion
   NODE_VERSION: "22.x"
-  PACKAGE_PATH: dist
+  PACKAGE_PATH: deploy
 
 jobs:
   build-and-deploy:
@@ -30,6 +30,22 @@ jobs:
 
       - name: Build application
         run: npm run build
+
+      - name: Prepare deployment package
+        run: |
+          mkdir deploy
+          cp -r dist deploy/dist
+          cp server.js deploy/server.js
+          cat > deploy/package.json << 'EOF'
+          {
+            "name": "distribucion",
+            "version": "0.0.0",
+            "private": true,
+            "scripts": {
+              "start": "node server.js"
+            }
+          }
+          EOF
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
