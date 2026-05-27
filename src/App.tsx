@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import type { Asignaciones, Nicknames, Avatares } from './types';
+import { useSync } from './hooks/useSync';
+import type { SyncState } from './hooks/useSync';
 import { generateSeats } from './utils/seats';
 import { exportJSON } from './utils/storage';
 import ESTUDIANTES from './data/estudiantes';
@@ -50,6 +52,36 @@ export default function App() {
     const data = JSON.stringify({ ...JSON.parse(jsonSnapshot), filas });
     localStorage.setItem(STORAGE_KEY, data);
   }, [jsonSnapshot, filas]);
+
+  // ── Real-time sync ────────────────────────────────────────────
+  const isRemoteUpdate = useRef(false);
+
+  const syncPayload = useMemo<SyncState>(() => ({
+    asignaciones,
+    listaEspera,
+    alias: nicknames,
+    iconos: avatares,
+    filas,
+  }), [asignaciones, listaEspera, nicknames, avatares, filas]);
+
+  function applyRemoteState(remote: SyncState): void {
+    isRemoteUpdate.current = true;
+    setAsignaciones(remote.asignaciones);
+    setListaEspera(remote.listaEspera);
+    setNicknames(remote.alias);
+    setAvatares(remote.iconos);
+    setFilas(remote.filas ?? 5);
+  }
+
+  const { connected, push } = useSync(applyRemoteState);
+
+  useEffect(() => {
+    if (isRemoteUpdate.current) {
+      isRemoteUpdate.current = false;
+      return;
+    }
+    push(syncPayload);
+  }, [syncPayload, push]);
 
   function handleRuletaResult(student: string): void {
     setPreguntados((prev) => prev.includes(student) ? prev : [...prev, student]);
@@ -159,6 +191,10 @@ export default function App() {
           <button className="tab tab-reset" onClick={handleReset}>
             🗑 Reiniciar
           </button>
+          <span
+            className={`sync-dot ${connected ? 'sync-on' : 'sync-off'}`}
+            title={connected ? 'Sincronizado en tiempo real' : 'Sin conexión — modo local'}
+          />
         </nav>
       </header>
 

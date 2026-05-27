@@ -48,6 +48,17 @@ body {
   text-align: center;
 }
 
+.sync-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  align-self: center;
+  flex-shrink: 0;
+}
+.sync-on  { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+.sync-off { background: #6b7280; }
+
 .app-main { flex: 1; padding: 2rem; }
 
 /* ── Shared vista ──────────────────────────────── */

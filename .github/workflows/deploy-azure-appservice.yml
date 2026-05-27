@@ -45,9 +45,13 @@ jobs:
             "private": true,
             "scripts": {
               "start": "node server.js"
+            },
+            "dependencies": {
+              "ws": "^8.18.0"
             }
           }
           EOF
+          cd deploy && npm install --omit=dev
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

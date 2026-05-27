@@ -3,6 +3,7 @@
 const http = require('http');
 const fs   = require('fs');
 const path = require('path');
+const { WebSocketServer } = require('ws');
 
 const PORT = process.env.PORT || 8080;
 const DIST = path.join(__dirname, 'dist');
@@ -25,7 +26,7 @@ const MIME = {
   '.webp':  'image/webp',
 };
 
-http.createServer((req, res) => {
+const httpServer = http.createServer((req, res) => {
   const urlPath  = decodeURIComponent(req.url.split('?')[0]);
   const candidate = path.normalize(path.join(DIST, urlPath));
 
@@ -49,6 +50,36 @@ http.createServer((req, res) => {
       res.end(data);
     });
   });
-}).listen(PORT, () => {
-  console.log(`Serving dist/ on port ${PORT}`);
+});
+
+// ── WebSocket sync server ──────────────────────────────────────
+let sharedState = null;
+
+const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+
+wss.on('connection', (ws) => {
+  // Send current state to the newly connected client
+  if (sharedState !== null) {
+    try { ws.send(JSON.stringify({ type: 'state', payload: sharedState })); } catch {}
+  }
+
+  ws.on('message', (data) => {
+    try {
+      const msg = JSON.parse(data.toString());
+      if (msg.type === 'ping') return; // keepalive, no-op
+      if (msg.type === 'update' && msg.payload) {
+        sharedState = msg.payload;
+        // Broadcast to all OTHER connected clients
+        for (const client of wss.clients) {
+          if (client !== ws && client.readyState === 1 /* OPEN */) {
+            try { client.send(JSON.stringify({ type: 'state', payload: sharedState })); } catch {}
+          }
+        }
+      }
+    } catch {}
+  });
+});
+
+httpServer.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
